@@ -1,6 +1,5 @@
 ﻿using Bogus;
 using Contracts.Interface.User;
-using Infrastructure.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -8,9 +7,9 @@ using System.Linq;
 
 namespace Infrastructure.BaseModels;
 
-public class BaseFakerManager : IBaseFakerManager
+public class BaseFakerManager
 {
-    private Faker _faker;
+    private Faker _faker { get; set; }
 
     public BaseFakerManager()
     {
@@ -39,7 +38,7 @@ public class BaseFakerManager : IBaseFakerManager
         return _faker.PickRandom(itemList);
     }
 
-    public static string GetRandomColorHex()
+    public string GetRandomColorHex()
     {
         var random = new Random();
         int r = random.Next(100, 256);
@@ -49,19 +48,7 @@ public class BaseFakerManager : IBaseFakerManager
         return ColorTranslator.ToHtml(Color.FromArgb(r, g, b));
     }
 
-    public T GetUser<T>() where T : class, IUser, new()
-    {
-        // Створення фейкера для типу T
-        var faker = new Faker<T>()
-            .RuleFor(e => e.FirstName, f => f.Name.FirstName())
-            .RuleFor(e => e.LastName, f => f.Name.LastName())
-            .RuleFor(e => e.BirthDate, f => f.Date.Past(30, DateTime.Now.AddYears(-18)))
-            .RuleFor(e => e.AddresseeForm, f => f.Address.FullAddress());
-
-        return faker.Generate();
-    }
-
-    public List<T> GetUsers<T>(int count) where T : class, IUser, new()
+    public List<T> GetUsers<T>(int count) where T : class, IBaseUser, new()
     {
         var users = new List<T>();
 
@@ -71,5 +58,20 @@ public class BaseFakerManager : IBaseFakerManager
         }
 
         return users;
+    }
+
+    private T GetUser<T>() where T : class, IBaseUser, new()
+    {
+        var faker = new Faker<T>()
+            .RuleFor(e => e.FirstName, f => f.Name.FirstName().ToUpperInvariant())
+            .RuleFor(e => e.LastName, f => f.Name.LastName().ToUpperInvariant());
+
+        if (typeof(IUser).IsAssignableFrom(typeof(T)))
+        {
+            faker.RuleFor(e => ((IUser)(object)e).BirthDate, f => f.Date.Past(30, DateTime.Now.AddYears(-18)))
+                 .RuleFor(e => ((IUser)(object)e).AddresseeForm, f => f.Address.FullAddress());
+        }
+        
+        return faker.Generate();
     }
 }
