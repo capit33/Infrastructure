@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
+using System;
+using System.Threading.Tasks;
 
 namespace Infrastructure.BaseModels;
 
@@ -28,5 +30,27 @@ public class BaseMongoRepository<T> where T : class
         var settings = MongoClientSettings.FromConnectionString(connectionString);
         var client = new MongoClient(settings);
         Collection = client.GetDatabase(mongoUrl.DatabaseName).GetCollection<T>(collectionName);
+
+        if (!CollectionInitialized())
+        {
+            try
+            {
+                InitializeCollectionAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("{projectName}, Error during collection initializing" + e.Message);
+            }
+        }
+    }
+
+    protected virtual bool CollectionInitialized()
+    {
+        return false;
+    }
+
+    protected virtual Task InitializeCollectionAsync()
+    {
+        return Task.CompletedTask;
     }
 }
